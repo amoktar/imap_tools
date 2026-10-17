@@ -1,10 +1,12 @@
 import os
 import tempfile
 import unittest
+from datetime import datetime, timezone
 
 from imap_tools import MailMessage
 from imap_tools.contacts import (
     ContactInfo,
+    _touch_dates,
     collect_from_message,
     folder_scan_mode,
     normalize_email,
@@ -41,6 +43,15 @@ class ContactsTest(unittest.TestCase):
         collect_from_message(contacts, msg, 'Sent', 'outbound', exclude=set(), skip_noise=True)
         self.assertIn('mary@example.net', contacts)
         self.assertEqual(contacts['mary@example.net'].outbound_count, 1)
+
+    def test_touch_dates_mixed_tz_awareness(self):
+        contact = ContactInfo('a@b.com')
+        naive = datetime(2020, 1, 1, 12, 0, 0)
+        aware = datetime(2020, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        _touch_dates(contact, naive)
+        _touch_dates(contact, aware)
+        self.assertEqual(contact.first_seen, naive.replace(tzinfo=timezone.utc))
+        self.assertEqual(contact.last_seen, aware)
 
     def test_exclude_and_noise(self):
         eml_path = os.path.join(os.path.dirname(__file__), 'messages', 'multipart_report_emails', 'report_530.eml')

@@ -1,7 +1,7 @@
 import csv
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from .folder import FolderInfo
@@ -99,10 +99,18 @@ def _pick_name(current: str, new: str) -> str:
     return current
 
 
+def _normalize_msg_date(msg_date: datetime) -> datetime:
+    """Coerce message dates to UTC-aware so naive/aware values are comparable."""
+    if msg_date.tzinfo is None:
+        return msg_date.replace(tzinfo=timezone.utc)
+    return msg_date.astimezone(timezone.utc)
+
+
 def _touch_dates(contact: ContactInfo, msg_date: datetime) -> None:
-    if contact.first_seen is None or msg_date < contact.first_seen:
+    msg_date = _normalize_msg_date(msg_date)
+    if contact.first_seen is None or msg_date < _normalize_msg_date(contact.first_seen):
         contact.first_seen = msg_date
-    if contact.last_seen is None or msg_date > contact.last_seen:
+    if contact.last_seen is None or msg_date > _normalize_msg_date(contact.last_seen):
         contact.last_seen = msg_date
 
 
